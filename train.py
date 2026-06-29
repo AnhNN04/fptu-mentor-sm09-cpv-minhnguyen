@@ -109,7 +109,8 @@ def step1_extract_frames(video_dir: Path, max_images: int, interval: int) -> Non
             frame_interval=interval,
             max_images=max_images,
         )
-        print(f"  Saved      : {total} images  →  {storage.DATASET_DIR / f'{student_id}_{student_name.replace(\" \", \"_\")}'}")
+        target_dir = storage.DATASET_DIR / f"{student_id}_{student_name.replace(' ', '_')}"
+        print(f"  Saved      : {total} images  →  {target_dir}")
 
     if not any_found:
         print(f"\n  [WARNING] No video files found in '{video_dir}'.")
