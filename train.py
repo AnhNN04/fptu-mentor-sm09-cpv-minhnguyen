@@ -55,6 +55,13 @@ from app.face import FaceEngine
 from app.function2_frames import DatasetCollector
 
 
+def to_rel(path: Path) -> Path:
+    try:
+        return path.relative_to(storage.ROOT)
+    except ValueError:
+        return path
+
+
 # ---------------------------------------------------------------------------
 # Video → student mapping
 # Keys are the expected filenames inside --video-dir.
@@ -95,7 +102,7 @@ def step1_extract_frames(video_dir: Path, max_images: int, interval: int) -> Non
     for video_name, (student_id, student_name) in VIDEO_STUDENT_MAP.items():
         video_path = video_dir / video_name
         if not video_path.exists():
-            print(f"  [SKIP] Not found: {video_path}")
+            print(f"  [SKIP] Not found: {to_rel(video_path)}")
             continue
 
         any_found = True
@@ -110,13 +117,13 @@ def step1_extract_frames(video_dir: Path, max_images: int, interval: int) -> Non
             max_images=max_images,
         )
         target_dir = storage.DATASET_DIR / f"{student_id}_{student_name.replace(' ', '_')}"
-        print(f"  Saved      : {total} images  →  {target_dir}")
+        print(f"  Saved      : {total} images  →  {to_rel(target_dir)}")
 
     if not any_found:
-        print(f"\n  [WARNING] No video files found in '{video_dir}'.")
+        print(f"\n  [WARNING] No video files found in '{to_rel(video_dir)}'.")
         print("  Place source .MOV files there or use --skip-extract to train on existing dataset.")
 
-    print(f"\n  Dataset directory: {storage.DATASET_DIR}")
+    print(f"\n  Dataset directory: {to_rel(storage.DATASET_DIR)}")
 
 
 # ---------------------------------------------------------------------------
@@ -147,7 +154,7 @@ def step2_train_model() -> None:
         return
 
     print(f"\n  Images trained on : {count}")
-    print(f"  Model saved to    : {storage.MODEL_PATH}")
+    print(f"  Model saved to    : {to_rel(storage.MODEL_PATH)}")
     print("\n  Model contents:")
     print("    labels    — list of folder names (positional, aligns with centroids)")
     print("    centroids — (N_students × 12 544) float32 matrix")
