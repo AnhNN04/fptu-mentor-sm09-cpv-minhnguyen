@@ -19,7 +19,7 @@
 ## Project Structure
 
 ```
-cpv-minhnguyen/               ← Git repository root
+project-folder/               ← repository root
 ├── train.py                  Training pipeline entry point
 ├── main.py                   Inference pipeline entry point
 ├── self_check.py             Automated sanity test
