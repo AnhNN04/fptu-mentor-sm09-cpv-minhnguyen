@@ -12,6 +12,32 @@ from .function1_stream import CameraStream
 from .function2_frames import fit_preview, mirror_frame, resize_for_detection
 from .function3_detection import scale_box
 
+import platform
+
+def load_system_font(size: int = 18) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    sys_name = platform.system()
+    paths = []
+    if sys_name == "Windows":
+        paths = ["C:/Windows/Fonts/segoeui.ttf", "C:/Windows/Fonts/arial.ttf"]
+    elif sys_name == "Darwin":
+        paths = [
+            "/System/Library/Fonts/Helvetica.ttc",
+            "/System/Library/Fonts/Supplemental/Arial.ttf",
+            "/Library/Fonts/Arial.ttf"
+        ]
+    else:
+        paths = [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/TTF/DejaVuSans.ttf"
+        ]
+
+    for p in paths:
+        try:
+            return ImageFont.truetype(p, size)
+        except (OSError, IOError):
+            continue
+    return ImageFont.load_default()
+
 
 class FaceAttendanceApp(ctk.CTk):
     def __init__(self) -> None:
@@ -37,10 +63,8 @@ class FaceAttendanceApp(ctk.CTk):
         self.cached_face_seen = False
         self.logged_ids: set[str] = set()
         self.video_image: ImageTk.PhotoImage | None = None
-        try:
-            self.font = ImageFont.truetype("C:/Windows/Fonts/segoeui.ttf", 22)
-        except (OSError, IOError):
-            self.font = ImageFont.load_default()
+        self.font = load_system_font(22)
+
         self.last_status = "Sẵn sàng"
         self.running = True
         self.train_button: ctk.CTkButton | None = None
@@ -189,12 +213,30 @@ class FaceAttendanceApp(ctk.CTk):
         self.set_status(f"Đã lưu ảnh {count}: {saved.name}")
 
     def train_model(self) -> None:
-        try:
-            count = self.face_engine.train()
-        except ValueError as exc:
-            self.set_status(f"Lỗi: {exc}")
-            return
+        if self.train_button:
+            self.train_button.configure(state="disabled")
+        self.set_status("Đang huấn luyện model... Vui lòng đợi (không tắt ứng dụng)")
+
+        import threading
+        def run_training():
+            try:
+                count = self.face_engine.train()
+                self.after(0, lambda: self.on_training_complete(count))
+            except Exception as exc:
+                self.after(0, lambda: self.on_training_failed(exc))
+
+        threading.Thread(target=run_training, daemon=True).start()
+
+    def on_training_complete(self, count: int) -> None:
         self.set_status(f"Huấn luyện xong {count} ảnh. Model: data/model.pkl")
+        if self.train_button:
+            self.train_button.configure(state="normal")
+
+    def on_training_failed(self, exc: Exception) -> None:
+        self.set_status(f"Lỗi: {exc}")
+        if self.train_button:
+            self.train_button.configure(state="normal")
+
 
     def clear_session(self) -> None:
         self.logged_ids.clear()
@@ -217,17 +259,42 @@ class FaceAttendanceApp(ctk.CTk):
         if self.frame_index % self.detect_every == 0:
             self.update_detection(frame)
 
+        # 1. Resize frame to fit screen preview first
+        h_orig, w_orig = frame.shape[:2]
+        target_w = max(320, self.video_label.winfo_width() - 8)
+        target_h = max(240, self.video_label.winfo_height() - 8)
+
+        scale_w = target_w / w_orig
+        scale_h = target_h / h_orig
+        scale = min(scale_w, scale_h)
+
+        new_w = max(1, int(w_orig * scale))
+        new_h = max(1, int(h_orig * scale))
+
+        resized_frame = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+        # 2. Draw bounding box on the resized frame coordinates
         box = self.cached_box
         if box and self.cached_face_seen:
-            cv2.rectangle(frame, (box.x, box.y), (box.x + box.w, box.y + box.h), self.cached_color, 2)
+            bx = int(box.x * scale)
+            by = int(box.y * scale)
+            bw = int(box.w * scale)
+            bh = int(box.h * scale)
+            cv2.rectangle(resized_frame, (bx, by), (bx + bw, by + bh), self.cached_color, 2)
 
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # 3. Convert to RGB PIL Image
+        rgb = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2RGB)
         image = Image.fromarray(rgb)
+
+        # 4. Render text directly on the final image for perfect, crisp text
         if box and self.cached_face_seen:
-            ImageDraw.Draw(image).text((box.x, max(4, box.y - 30)), self.cached_label, font=self.font, fill=self.cached_color[::-1])
-        image = fit_preview(image, max(320, self.video_label.winfo_width() - 8), max(240, self.video_label.winfo_height() - 8))
-        self.video_image = ctk.CTkImage(light_image=image, dark_image=image, size=(image.width, image.height))
+            bx = int(box.x * scale)
+            by = int(box.y * scale)
+            ImageDraw.Draw(image).text((bx, max(4, by - 30)), self.cached_label, font=self.font, fill=self.cached_color[::-1])
+
+        self.video_image = ctk.CTkImage(light_image=image, dark_image=image, size=(new_w, new_h))
         self.video_label.configure(image=self.video_image, text="")
+
 
 
     def update_detection(self, frame) -> None:
