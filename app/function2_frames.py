@@ -9,7 +9,7 @@ import numpy as np
 from PIL import Image
 
 from . import storage
-from .config import MAX_IMAGES_PER_STUDENT, MIN_FRAME_DIFFERENCE
+from .config import MAX_IMAGES_PER_STUDENT, MIN_FRAME_DIFFERENCE, get_camera_backend
 
 
 def mirror_frame(frame):
@@ -114,7 +114,7 @@ class DatasetCollector:
 
     def connect(self, source: str | int) -> bool:
         self.release()
-        backend = cv2.CAP_DSHOW if isinstance(source, int) else cv2.CAP_FFMPEG
+        backend = get_camera_backend(source)
         self.cap = cv2.VideoCapture(source, backend)
         if not self.cap.isOpened():
             self.release()

@@ -1,8 +1,10 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import threading
 
 import cv2
+
+from .config import get_camera_backend
 
 class CameraStream:
     """Function 1: stream video from webcam or RTSP camera."""
@@ -20,7 +22,7 @@ class CameraStream:
 
     def connect(self, source: str | int) -> bool:
         self.disconnect()
-        backend = cv2.CAP_DSHOW if isinstance(source, int) else cv2.CAP_FFMPEG
+        backend = get_camera_backend(source)
         self._cap = cv2.VideoCapture(source, backend)
         if not self._cap.isOpened():
             self.disconnect()
