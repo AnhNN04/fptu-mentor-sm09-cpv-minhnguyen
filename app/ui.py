@@ -226,9 +226,9 @@ class FaceAttendanceApp(ctk.CTk):
         if box and self.cached_face_seen:
             ImageDraw.Draw(image).text((box.x, max(4, box.y - 30)), self.cached_label, font=self.font, fill=self.cached_color[::-1])
         image = fit_preview(image, max(320, self.video_label.winfo_width() - 8), max(240, self.video_label.winfo_height() - 8))
-        self.video_image = ImageTk.PhotoImage(image)
+        self.video_image = ctk.CTkImage(light_image=image, dark_image=image, size=(image.width, image.height))
         self.video_label.configure(image=self.video_image, text="")
-        self.video_label._image = self.video_image
+
 
     def update_detection(self, frame) -> None:
         detect_frame, scale = resize_for_detection(frame)
