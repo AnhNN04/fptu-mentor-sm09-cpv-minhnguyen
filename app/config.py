@@ -42,3 +42,28 @@ BASE_THRESHOLD: float = 16.0
 # Reject a prediction if the gap between the best and second-best
 # distance is smaller than this margin (ambiguous match → Unknown).
 AMBIGUITY_MARGIN: float = 1.2
+
+
+# ---------------------------------------------------------------------------
+# Platform-specific Video Capture Backends
+# ---------------------------------------------------------------------------
+import platform
+import cv2
+
+def get_camera_backend(source: str | int) -> int:
+    """Returns the optimized OpenCV capture backend depending on source and OS."""
+    if isinstance(source, int):
+        # Local webcam/camera index
+        sys_name = platform.system()
+        if sys_name == "Windows":
+            return cv2.CAP_DSHOW
+        elif sys_name == "Darwin":
+            return cv2.CAP_AVFOUNDATION
+        elif sys_name == "Linux":
+            return cv2.CAP_V4L2
+        else:
+            return cv2.CAP_ANY
+    else:
+        # RTSP stream or static video files
+        return cv2.CAP_FFMPEG
+
