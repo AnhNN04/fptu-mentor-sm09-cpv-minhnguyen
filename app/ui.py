@@ -58,7 +58,8 @@ class FaceAttendanceApp(ctk.CTk):
         top.grid(row=0, column=0, sticky="ew")
         top.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(top, text="Camera", font=("Arial", 14, "bold")).grid(row=0, column=0, padx=14, pady=12)
-        self.url_entry = ctk.CTkEntry(top, placeholder_text="RTSP URL nếu dùng IP camera")
+        self.url_entry = ctk.CTkEntry(top, placeholder_text="RTSP URL hoặc Index webcam (mặc định 0)")
+
         self.url_entry.grid(row=0, column=1, sticky="ew", padx=(0, 10), pady=12)
         ctk.CTkButton(top, text="Mở webcam", command=self.connect_webcam, width=110).grid(row=0, column=2, padx=6, pady=12)
         ctk.CTkButton(top, text="Kết nối RTSP", command=self.connect_camera, width=120).grid(row=0, column=3, padx=6, pady=12)
@@ -123,11 +124,20 @@ class FaceAttendanceApp(ctk.CTk):
         if self.clear_session_button:
             self.clear_session_button.pack(fill="x")
     def connect_webcam(self) -> None:
-        self.set_status("Đang mở webcam laptop...")
-        if self.camera.connect(0):
-            self.set_status(f"Đã mở webcam laptop ({self.camera.resolution})")
+        val = self.url_entry.get().strip()
+        idx = 0
+        if val:
+            try:
+                idx = int(val)
+            except ValueError:
+                pass
+
+        self.set_status(f"Đang mở webcam laptop (index {idx})...")
+        if self.camera.connect(idx):
+            self.set_status(f"Đã mở webcam (index {idx}) ({self.camera.resolution})")
         else:
-            self.set_status("Lỗi: không mở được webcam")
+            self.set_status(f"Lỗi: không mở được webcam (index {idx})")
+
 
     def connect_camera(self) -> None:
         url = self.url_entry.get().strip()
