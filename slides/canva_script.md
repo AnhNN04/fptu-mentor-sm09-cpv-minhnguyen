@@ -150,8 +150,14 @@ Add a small "data/model.pkl" cylinder icon between F4 training output and F4 inf
 **CONTENT — KEY POINTS (left side, 4 bullet points):**
 
 - **Connect to source**
-  Supports webcam (`index 0`) and IP camera via RTSP protocol (`rtsp://192.168.x.x/stream`).
-  OpenCV backend: `CAP_DSHOW` for webcam, `CAP_FFMPEG` for RTSP.
+  Supports local webcam and IP camera via RTSP. Camera backend is **platform-aware**:
+  - `AVFOUNDATION` on macOS (Darwin)
+  - `DSHOW` on Windows
+  - `V4L2` on Linux
+  - `FFMPEG` for video files and RTSP URLs.
+
+- **Selectable camera index**
+  User can input a custom camera index (e.g. `1` or `2` instead of default `0`) via the UI text entry to bypass virtual cameras (like OBS Studio) and open the FaceTime camera directly.
 
 - **Minimize buffer delay**
   Buffer size set to `1` → always reads the latest frame, no stale frames accumulate.
@@ -162,6 +168,7 @@ Add a small "data/model.pkl" cylinder icon between F4 training output and F4 inf
 
 - **Context Manager**
   Supports `with CameraStream() as cam:` — auto-disconnects on exit, no resource leaks.
+
 
 **VISUALIZATION (right side):**
 Draw a threading diagram:
@@ -375,8 +382,13 @@ centroid = average of all image vectors for that student
 - Set threshold = `min(16.0, p95_own × 1.15, p5_impostor × 0.85)`
 - Guarantees the model accepts real matches and rejects strangers
 
-**Step 5 — Save model**
+**Step 5 — Run training in background thread**
+- Executed in a separate `threading.Thread` to prevent blocking the Tkinter event loop (prevents application lag/hang).
+- Disables "Huấn luyện model" button in UI and shows loading text. Re-enables button upon safe main-thread callbacks via `self.after()`.
+
+**Step 6 — Save model**
 - `data/model.pkl` contains:
+
   - `centroids` → (6 × 12,544) matrix — one row per student
   - `labels` → list of folder names aligned with centroids
   - `people` → folder name → (student_id, display_name)
@@ -482,16 +494,16 @@ python train.py
 ```
 Output:
 > `=== STEP 1: Extract frames ===`
-> `  Saved 30 images for Nguyen Quang Minh`
+> `  Saved 50 images for Nguyen Quang Minh`
 > `=== STEP 2: Train model ===`
-> `  Trained on 554 images — model.pkl saved`
+> `  Trained on 1104 images — model.pkl saved`
 
 **Inference Pipeline:**
 ```
 python main.py
 ```
 Output (in UI log):
-> `✅ Webcam opened (1280×720)`
+> `✅ Webcam (index 1) opened (1280×720)`
 > `✅ Điểm danh: HE204913 — Nguyen Quang Minh`
 > `✅ Điểm danh: HE200629 — Le Trung Hieu`
 > `❌ Unknown face — skipped`
@@ -500,9 +512,10 @@ Output (in UI log):
 
 Four metric boxes:
 - **6** — Students enrolled
-- **554** — Training images
-- **< 1s** — Training time
+- **1104** — Training images (max 50 per student)
+- **< 1s** — Training time (centroid classifier)
 - **~4 FPS** — Detection rate (every 4th frame)
+
 
 **attendance.csv output format:**
 ```
@@ -521,7 +534,8 @@ Draw a mock desktop app window:
 - Below: a log box showing 3 green ✅ attendance entries
 
 **SPEAKER NOTES:**
-> "Here's the application running. After training on our 554 dataset images, the model is ready in under a second. In the live app, students just stand in front of the camera. The system detects the face, runs recognition, and writes their ID to the attendance file. The whole process takes about 4 frame cycles — roughly real-time."
+> "Here's the application running. After training on our 1104 dataset images, the model is ready in under a second. In the live app, students just stand in front of the camera. The system detects the face, runs recognition, and writes their ID to the attendance file. The whole process takes about 4 frame cycles — roughly real-time. Text and bounding boxes are rendered dynamically at display resolution, ensuring perfectly crisp labels."
+
 
 ---
 
@@ -550,11 +564,12 @@ Draw a mock desktop app window:
 
 **Card 5 — F4 ✅**
 🧠 Centroid Recognition
-> No neural network needed. Trains in < 1 second. Auto-calibrated rejection threshold. Two-level Unknown filtering.
+> No neural network needed. Centroid computed in 12,544-D space. Thread-safe training prevents UI freezes.
 
 **Card 6 — System ✅**
-📋 Attendance Logging
-> CSV output with student ID, name, and timestamp. Clean two-pipeline architecture: `train.py` + `main.py`.
+📋 Attendance Logging & HighDPI
+> CSV output logged once per session. Crisp box + text rendering directly at final resolution, with system font fallbacks.
+
 
 **Bottom — Final line:**
 > "Simple approach. Real results. Built entirely with OpenCV and NumPy."
