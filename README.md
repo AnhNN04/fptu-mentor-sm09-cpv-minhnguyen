@@ -25,6 +25,7 @@ project-folder/               ← repository root
 ├── self_check.py             Automated sanity test
 ├── requirements.txt          Python dependencies
 ├── assignment.md             Assignment specification
+├── running-guide.md          Cross-platform running guide (macOS / Linux / Windows)
 │
 ├── app/                      Source package
 │   ├── config.py             All shared constants (IMAGE_SIZE, thresholds, …)
@@ -54,6 +55,19 @@ source .venv/bin/activate       # macOS / Linux
 # 2. Install dependencies (first time only)
 pip install -r requirements.txt
 ```
+
+> 📖 For a detailed, step-by-step guide covering all operating systems, see **[running-guide.md](running-guide.md)**.
+
+---
+
+## Running Guide
+
+See **[running-guide.md](running-guide.md)** for the full cross-platform guide, including:
+
+- Environment setup on **macOS**, **Linux**, and **Windows**
+- Dependency installation notes and platform-specific fixes
+- Detailed training and inference instructions with expected output
+- Troubleshooting for common issues (camera, tkinter, FFMPEG, PowerShell, etc.)
 
 ---
 
