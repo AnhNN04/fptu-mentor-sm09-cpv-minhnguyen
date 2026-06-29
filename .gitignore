@@ -11,12 +11,11 @@ venv/
 env/
 
 # Generated artifacts
-detect-face/data/model.pkl
-detect-face/attendance.csv
+data/model.pkl
+attendance.csv
 
-# Dataset and source media — store externally
-detect-face/dataset/
-detect-face/videos/
+# Dataset and source media — store externally, not in git
+dataset/
 videos/
 students/
 
